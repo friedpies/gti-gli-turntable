@@ -1,17 +1,15 @@
 #include <SoftwareSerial.h>
 #include <Sabertooth.h>
 
-// Controller code for GTI-GLI turntable obstacle.
+// Controller code for GTI-GLI turntable obstacle. Obstacle is activated by first "arming" the controller, then triggering via a button press
 
-#define armSwitch 3 // 1 is off, 0 is on
 #define activateButton 2
-#define slider A0 //goes from 0-1024
+#define armSwitch 3 // 1 is off, 0 is on
 
-SoftwareSerial SWSerial(NOT_A_PIN, 11);
+SoftwareSerial SWSerial(NOT_A_PIN, 11); 
 Sabertooth ST(128, SWSerial);
 
 int maxSpeed = 90; 
-int readSpeed = 0;
 int turnDirection = 1; // CW is 1, CCW is -1
 float currentSpeed = 0;
 float accel = .5;
@@ -32,7 +30,7 @@ enum states turntableState = UNARMED_STATE;
 void setup() {
 
   Serial.begin(9600);
-  SWSerial.begin(9600);
+  SWSerial.begin(9600); // software serial connection to motor driver
   ST.autobaud();
 
   pinMode(armSwitch, INPUT_PULLUP);
@@ -44,7 +42,7 @@ void loop() {
 
   if (turntableState == UNARMED_STATE) {
     Serial.println("UNARMED");
-    ST.motor(0);
+    ST.motor(0); // motor commands range from -127 (full reverse) to 127 (full forward)
     if (digitalRead(armSwitch) == LOW) {
       turntableState = ARMED_STATE;
     }
@@ -54,10 +52,10 @@ void loop() {
   if (turntableState == ARMED_STATE) {
     Serial.println("ARMED");
     if (digitalRead(activateButton) == LOW) {
-//      maxSpeed = map(analogRead(slider), 0, 1024, 0, 127);
-      turnDirection = getRandomDirection();
+      turnDirection = getRandomDirection(); 
       turntableState = ACCEL_STATE;
-      delay(50); // debounce delay
+      currentSpeed = 0;
+      delay(50); // button debounce delay
     }
 
     if (digitalRead(armSwitch) == HIGH) {
@@ -76,7 +74,6 @@ void loop() {
       turntableState = RUNNING_STATE;
       currentTime = millis();
       timeElapsed = 0;
-      ST.motor(currentSpeed * turnDirection);
     }
 
     if (digitalRead(armSwitch)) { // if switch is unarmed, slow the turntable down before stopping
